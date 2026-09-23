@@ -1,6 +1,6 @@
 # 项目文档目录
 
-本目录统一沉淀工程文档，遵循 `2026-08-01-v3.4` 文档治理协议（单一事实源见 `/Users/cy/.sentra/document-governance-protocol.md`）。
+本目录统一沉淀工程文档，遵循 `2026-08-01-v3.4` 文档治理协议（单一事实源见 `~/.sentra/document-governance-protocol.md`）。
 
 ## 目录约定
 
