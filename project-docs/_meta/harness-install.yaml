@@ -1,0 +1,19 @@
+schema_version: 1
+installed_version: 1.21.2
+protocol_version: "2026-08-01-v3"
+platforms: [claude]
+installed_at: 2026-09-19T06:59:17Z
+updated_at: 2026-09-19T06:59:17Z
+assets:
+  rules:
+    - { path: .claude/rules/memory-capture.md, sha256: b8e929d9aecbff094bd5ee659c1a5092331553a9e3a6ce377842faa9f796f905, source_version: 1.21.2 }
+    - { path: .claude/rules/memory-general.md, sha256: 781bcc6f327ee2aba837f91c761a4b9a4f4c11940e74f24f6ee20000ed35c33b, source_version: 1.21.2 }
+    - { path: .claude/rules/memory-database.md, sha256: ed07d553f66b6e751c70a28250b4180507a58cb0dadcd6ffcc1583c30040eb3c, source_version: 1.21.2 }
+    - { path: .claude/rules/memory-config.md, sha256: e7f6ad0e1d8ad06c53fec4eeb76a468efe4979aa7a5a36beb6400f98df9c9f11, source_version: 1.21.2 }
+  hooks:
+    - { path: .claude/hooks/detect-stale-iteration.sh, sha256: d1ad505417afb87458310d2d9f9b9fbb360fc93a1176782202e325b6d3e7c613, source_version: 1.21.2 }
+    - { path: .claude/hooks/check-harness-version.sh, sha256: b24217f66e45c0cbdd945dae0754125607339102e22567d9a44d677c0347c992, source_version: 1.21.2 }
+  scaffolds:
+    - { path: project-docs/domain/README.md, sha256: d1d53cbaf949709ee4469420b3c548bb68433fb34de12c0e2bfb80b9bb11e822, source_version: 1.21.2 }
+    - { path: project-docs/decisions/README.md, sha256: 97020b3a630af6db5f7017a77e5433d5f51bd91f3c2912f1adabee58d9396469, source_version: 1.21.2 }
+    - { path: project-docs/learnings/README.md, sha256: ebe89c4241e053a602ca1ce93967ebc2d93ba4118a58904a4fad002d418c9257, source_version: 1.21.2 }

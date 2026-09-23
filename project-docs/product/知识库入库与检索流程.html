@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知识库入库与检索流程</title>
+<style>
+:root {
+  --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --border: #d1d9e0;
+  --accent: #0969da; --code-bg: #f6f8fa; --quote-bg: #fff8e5; --quote-bar: #d4a72c;
+  --thead: #f6f8fa; --row: #fbfcfd; --sidebar: #f6f8fa;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --border: #3d444d;
+    --accent: #4493f8; --code-bg: #151b23; --quote-bg: #2a1e05; --quote-bar: #d4a72c;
+    --thead: #151b23; --row: #11161d; --sidebar: #010409;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.75 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+        "Microsoft YaHei", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.layout { display: flex; align-items: flex-start; max-width: 1500px; margin: 0 auto; }
+nav.toc {
+  position: sticky; top: 0; flex: 0 0 290px; max-height: 100vh; overflow-y: auto;
+  padding: 28px 18px; background: var(--sidebar); border-right: 1px solid var(--border);
+  font-size: 13.5px;
+}
+nav.toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 12px; border: 0; padding: 0; }
+nav.toc a { display: block; padding: 4px 0 4px 0; color: var(--fg);
+  text-decoration: none; border-left: 2px solid transparent; padding-left: 10px; }
+nav.toc a:hover { color: var(--accent); border-left-color: var(--accent); }
+nav.toc a.lvl3 { padding-left: 26px; color: var(--muted); font-size: 12.5px; }
+main { flex: 1 1 auto; min-width: 0; padding: 36px 48px 120px; }
+h1 { font-size: 30px; margin: 0 0 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+h2 { font-size: 23px; margin: 44px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+h3 { font-size: 18.5px; margin: 30px 0 10px; }
+h4 { font-size: 16px; margin: 22px 0 8px; }
+p { margin: 12px 0; }
+a { color: var(--accent); }
+code { background: var(--code-bg); border-radius: 5px; padding: .15em .4em;
+  font: 13.5px/1.5 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 13px; }
+blockquote { margin: 16px 0; padding: 12px 16px; background: var(--quote-bg);
+  border-left: 4px solid var(--quote-bar); border-radius: 0 6px 6px 0; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 36px 0; }
+ul, ol { padding-left: 26px; }
+li { margin: 5px 0; }
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+th { background: var(--thead); font-weight: 600; white-space: nowrap; }
+tbody tr:nth-child(even) { background: var(--row); }
+.figure { margin: 22px 0; background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; }
+.figure-bar { display: flex; gap: 6px; align-items: center; padding: 8px 10px;
+  border-bottom: 1px solid var(--border); font-size: 12.5px; color: var(--muted); }
+.figure-bar button { font: inherit; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.figure-bar button:hover { border-color: var(--accent); color: var(--accent); }
+.figure-bar .spacer { flex: 1; }
+/* safe center：图比版面窄时居中，比版面宽时退回左对齐——
+   普通 center 会把溢出部分从左侧裁掉且滚不回来 */
+.mermaid { padding: 18px; overflow: auto; display: flex; justify-content: safe center; }
+.mermaid svg { max-width: none !important; }
+.mermaid-fallback { color: var(--muted); font-size: 13px; text-align: left; }
+@media (max-width: 1000px) {
+  nav.toc { display: none; }
+  main { padding: 24px 18px 80px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc"><h2>目录</h2><a class="lvl2" href="#0-读这份文档前-组件与存储速查">0. 读这份文档前：组件与存储速查</a><a class="lvl3" href="#0-1-参与的进程">0.1 参与的进程</a><a class="lvl3" href="#0-2-参与的存储">0.2 参与的存储</a><a class="lvl2" href="#1-入库流程">1. 入库流程</a><a class="lvl3" href="#1-1-同步段-http-请求内完成-用户等待">1.1 同步段（HTTP 请求内完成，用户等待）</a><a class="lvl3" href="#1-2-异步段主链路-后台工作进程-document-process-任务">1.2 异步段主链路（后台工作进程，`document:process` 任务）</a><a class="lvl3" href="#1-3-异步段富化子链路-并行派发">1.3 异步段富化子链路（并行派发）</a><a class="lvl3" href="#1-4-入库全景图-1-同步段与异步主链路">1.4 入库全景图 1：同步段与异步主链路</a><a class="lvl3" href="#1-5-入库全景图-2-富化子链路">1.5 入库全景图 2：富化子链路</a><a class="lvl2" href="#2-检索流程">2. 检索流程</a><a class="lvl3" href="#2-1-一轮问答的阶段清单">2.1 一轮问答的阶段清单</a><a class="lvl3" href="#2-2-检索全景图">2.2 检索全景图</a><a class="lvl3" href="#2-3-混合检索内部-两路召回怎么合成一张榜">2.3 混合检索内部：两路召回怎么合成一张榜</a><a class="lvl3" href="#2-4-索引表结构要点">2.4 索引表结构要点</a><a class="lvl2" href="#3-外部模型调用总表">3. 外部模型调用总表</a><a class="lvl3" href="#3-1-一次典型入库的模型调用次数">3.1 一次典型入库的模型调用次数</a><a class="lvl3" href="#3-2-一次典型问答的模型调用次数">3.2 一次典型问答的模型调用次数</a><a class="lvl2" href="#4-数据表访问矩阵">4. 数据表访问矩阵</a><a class="lvl2" href="#5-容易踩的坑">5. 容易踩的坑</a><a class="lvl2" href="#附-关键代码位置">附：关键代码位置</a></nav>
+<main><h1 id="知识库入库与检索流程">知识库入库与检索流程</h1>
+<blockquote>事实源：<code>internal/application/service/knowledge_*.go</code>、<code>internal/application/service/chat_pipeline/*.go</code>、<code>internal/application/repository/retriever/<strong></code>、<code>docreader/</strong></code>、<code>docker-compose.yml</code>。<br>本文重点回答两个问题：<strong>每一步调用了哪些外部模型</strong>、<strong>每一步读写了哪些数据库和表</strong>。模型调用点与表访问点逐条来自代码实读，未作推断；少数无法从代码判定业务意图的地方已就地标注。</blockquote>
+<hr>
+<h2 id="0-读这份文档前-组件与存储速查">0. 读这份文档前：组件与存储速查</h2>
+<h3 id="0-1-参与的进程">0.1 参与的进程</h3>
+<div class="table-wrap"><table><thead><tr><th>组件</th><th>语言</th><th>在两条流程里干什么</th></tr></thead><tbody><tr><td>主应用</td><td>Go</td><td>接收请求、编排全流程、调用所有外部模型、读写所有数据库</td></tr><tr><td>后台工作进程</td><td>Go（与主应用同一镜像，独立协程池）</td><td>消费异步任务：解析、索引、富化、同步</td></tr><tr><td>文档解析服务</td><td>Python（gRPC）</td><td><strong>只做一件事</strong>：把任意格式文件转成统一 Markdown + 图片清单。<strong>不分块、不识字、不调模型</strong></td></tr><tr><td>沙箱</td><td>独立容器</td><td>智能体执行脚本，与本文两条流程无关</td></tr></tbody></table></div>
+<blockquote>一个常见误解：以为解析服务负责识字（OCR）和图片理解。实际不是——解析服务只做格式转换，<strong>识字与图片描述全部在主应用侧调用图片理解模型完成</strong>（见 <code>docreader/parser/base_parser.py:48</code> 的注释：chunking / OCR / VLM caption 均在 Go 侧）。</blockquote>
+<h3 id="0-2-参与的存储">0.2 参与的存储</h3>
+<div class="table-wrap"><table><thead><tr><th>存储</th><th>类型</th><th>在两条流程里的角色</th><th>是否必需</th></tr></thead><tbody><tr><td>PostgreSQL（ParadeDB 镜像，带 pgvector + pg_search）</td><td>关系型 + 向量 + 全文</td><td>业务主库；默认也是向量与关键词索引的存放处</td><td><strong>必需</strong></td></tr><tr><td>Redis</td><td>内存 KV</td><td>异步任务队列、流式输出跨实例分发、限流与并发闸门</td><td><strong>必需</strong></td></tr><tr><td>对象存储（MinIO / COS / S3 / OSS / OBS / KS3 / TOS / 本地磁盘）</td><td>对象</td><td>存原始文件与文档内图片</td><td><strong>必需</strong>（本地磁盘为默认兜底）</td></tr><tr><td>外部向量库（Elasticsearch / OpenSearch / Qdrant / Milvus / Weaviate / Doris / 腾讯向量数据库）</td><td>向量</td><td>替代 PostgreSQL 存放向量索引</td><td>可选</td></tr><tr><td>Neo4j</td><td>图</td><td>存实体与关系，供实体检索使用</td><td>可选（开启图谱抽取时）</td></tr><tr><td>SearXNG</td><td>搜索聚合</td><td>联网检索</td><td>可选</td></tr></tbody></table></div>
+<hr>
+<h2 id="1-入库流程">1. 入库流程</h2>
+<h3 id="1-1-同步段-http-请求内完成-用户等待">1.1 同步段（HTTP 请求内完成，用户等待）</h3>
+<p>入口：<code>POST /api/v1/knowledge-bases/:id/knowledge/file</code>（文件）、<code>.../knowledge/url</code>（网址）、<code>.../knowledge/manual</code>（手写 Markdown）</p>
+<div class="table-wrap"><table><thead><tr><th>步</th><th>动作</th><th>外部模型</th><th>读表</th><th>写表</th><th>其他存储</th></tr></thead><tbody><tr><td>1</td><td>校验调用者对该知识库可写</td><td>—</td><td><code>knowledge_bases</code>、<code>tenant_members</code>、<code>kb_shares</code>、<code>organization_tenant_members</code>、<code>tenant_api_keys</code></td><td>—</td><td>—</td></tr><tr><td>2</td><td>读取知识库的加工配置（切分规则、模型绑定、富化开关）</td><td>—</td><td><code>knowledge_bases</code></td><td>—</td><td>—</td></tr><tr><td>3</td><td>计算文件内容指纹，判重</td><td>—</td><td><code>knowledges</code></td><td>—</td><td>—</td></tr><tr><td>4</td><td>保存原始文件，登记为可复用资源</td><td>—</td><td><code>storage_backends</code></td><td><code>resources</code>、<code>resource_bindings</code></td><td><strong>对象存储写入</strong></td></tr><tr><td>5</td><td>创建知识条目，状态 <code>pending</code></td><td>—</td><td>—</td><td><code>knowledges</code></td><td>—</td></tr><tr><td>6</td><td>投递解析任务</td><td>—</td><td>—</td><td>—</td><td><strong>Redis 入队 <code>document:process</code></strong></td></tr><tr><td>7</td><td>返回</td><td>—</td><td>—</td><td>—</td><td>—</td></tr></tbody></table></div>
+<p><strong>第 3 步命中重复时</strong>不报错：刷新旧记录时间戳并返回「重复文件」语义的响应，前端据此提示。</p>
+<h3 id="1-2-异步段主链路-后台工作进程-document-process-任务">1.2 异步段主链路（后台工作进程，<code>document:process</code> 任务）</h3>
+<div class="table-wrap"><table><thead><tr><th>步</th><th>动作</th><th>外部模型</th><th>读表</th><th>写表</th><th>其他存储</th></tr></thead><tbody><tr><td>1</td><td>取消/删除检查</td><td>—</td><td><code>knowledges</code></td><td>—</td><td>—</td></tr><tr><td>2</td><td>置 <code>processing</code>，开处理追踪</td><td>—</td><td>—</td><td><code>knowledges</code>、<code>knowledge_processing_spans</code></td><td>—</td></tr><tr><td>3</td><td>取原始文件</td><td>—</td><td><code>resources</code>、<code>storage_backends</code></td><td>—</td><td><strong>对象存储读取</strong></td></tr><tr><td>4</td><td><strong>调用文档解析服务</strong>，得到 Markdown + 图片清单</td><td>无（纯格式转换）</td><td>—</td><td>—</td><td>gRPC 调用解析服务</td></tr><tr><td>4b</td><td>音频类文件：<strong>调用语音转写模型</strong></td><td><strong>ASR</strong>（知识库 <code>asr_config.model_id</code>）</td><td><code>models</code></td><td>—</td><td>—</td></tr><tr><td>5</td><td>图片落对象存储</td><td>—</td><td><code>storage_backends</code></td><td><code>resources</code>、<code>resource_bindings</code></td><td><strong>对象存储写入</strong></td></tr><tr><td>6</td><td>按知识库切分规则切分；开启父子模式时切两层</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><td>7</td><td>清理该条目的旧分块与旧索引（重新解析场景）</td><td>—</td><td>—</td><td><code>chunks</code>（删）、<code>embeddings</code>（删）</td><td>外部向量库（删）</td></tr><tr><td>8</td><td>分块落库</td><td>—</td><td>—</td><td><code>chunks</code></td><td>—</td></tr><tr><td>9</td><td>估算索引体积、校验空间配额</td><td>—</td><td><code>tenants</code></td><td>—</td><td>—</td></tr><tr><td>10</td><td><strong>批量向量化并写索引</strong></td><td><strong>Embedding</strong>（知识库 <code>embedding_model_id</code>）</td><td><code>models</code>、<code>vector_stores</code></td><td><code>embeddings</code></td><td>或外部向量库</td></tr><tr><td>11</td><td>索引写失败 → 回滚第 8 步的分块</td><td>—</td><td>—</td><td><code>chunks</code>（删）</td><td>—</td></tr><tr><td>12</td><td>累加空间已用存储量</td><td>—</td><td>—</td><td><code>tenants</code></td><td>—</td></tr><tr><td>13</td><td>判定是否还有富化任务</td><td>—</td><td><code>knowledge_bases</code></td><td><code>knowledges</code>（<code>finalizing</code> 或 <code>completed</code>）</td><td>—</td></tr><tr><td>14</td><td>投递后处理任务</td><td>—</td><td>—</td><td><code>task_pending_ops</code></td><td><strong>Redis 入队 <code>knowledge:post_process</code></strong></td></tr></tbody></table></div>
+<p><strong>第 10 步是整条链路唯一的强一致要求点</strong>：分块表与向量索引必须同时存在或同时不存在，系统用「索引写失败就删分块」来保证，而不是分布式事务。</p>
+<h3 id="1-3-异步段富化子链路-并行派发">1.3 异步段富化子链路（并行派发）</h3>
+<p>后处理任务按知识库配置并行派发以下子任务，各自独立成败：</p>
+<div class="table-wrap"><table><thead><tr><th>子任务</th><th>队列</th><th>外部模型</th><th>读表</th><th>写表</th><th>其他存储</th></tr></thead><tbody><tr><td><strong>图片识字 + 图片描述</strong></td><td><code>multimodal</code></td><td><strong>图片理解模型</strong>（知识库 <code>vlm_config.model_id</code>）&lt;br/&gt;每张图调 2 次：一次识字、一次描述</td><td><code>models</code>、<code>knowledge_bases</code>、<code>chunks</code></td><td><code>chunks</code>（新增 <code>image_ocr</code> / <code>image_caption</code> 两类子块）</td><td>对象存储读图</td></tr><tr><td>↳ 新增子块的向量化</td><td><code>multimodal</code></td><td><strong>Embedding</strong></td><td><code>models</code></td><td><code>embeddings</code></td><td>或外部向量库</td></tr><tr><td><strong>整份摘要与画像</strong></td><td><code>summary</code></td><td><strong>对话生成模型</strong>（知识库 <code>summary_model_id</code>）</td><td><code>models</code>、<code>chunks</code></td><td><code>knowledges</code>（摘要、画像、摘要状态）、<code>chunks</code>（新增 <code>summary</code> 块）</td><td>—</td></tr><tr><td>↳ 摘要块向量化</td><td><code>summary</code></td><td><strong>Embedding</strong></td><td><code>models</code></td><td><code>embeddings</code></td><td>或外部向量库</td></tr><tr><td><strong>推荐问题生成</strong></td><td><code>question</code></td><td><strong>对话生成模型</strong>（<code>summary_model_id</code>）</td><td><code>models</code>、<code>chunks</code></td><td><code>chunks</code>（问题写回分块元信息）</td><td>—</td></tr><tr><td>↳ 问题向量化</td><td><code>question</code></td><td><strong>Embedding</strong></td><td><code>models</code></td><td><code>embeddings</code></td><td>或外部向量库</td></tr><tr><td><strong>自动打标</strong></td><td><code>postprocess</code></td><td><strong>对话生成模型</strong>（<code>auto_tag_config.model_id</code>，缺省回落 <code>summary_model_id</code>）</td><td><code>models</code>、<code>knowledge_tags</code>、<code>chunks</code></td><td><code>knowledge_tag_relations</code></td><td>—</td></tr><tr><td><strong>表格摘要</strong></td><td><code>postprocess</code></td><td><strong>对话生成模型</strong></td><td><code>models</code>、<code>chunks</code></td><td><code>chunks</code>（新增 <code>table_summary</code> / <code>table_column</code> 块）</td><td>—</td></tr><tr><td><strong>实体与关系抽取</strong></td><td><code>graph</code></td><td><strong>对话生成模型</strong>（<code>summary_model_id</code>）</td><td><code>models</code>、<code>chunks</code></td><td>—</td><td><strong>Neo4j 写入</strong></td></tr><tr><td><strong>Wiki 蒸馏</strong></td><td><code>wiki</code></td><td><strong>对话生成模型</strong>（知识库 <code>wiki_config.synthesis_model_id</code>）</td><td><code>models</code>、<code>chunks</code>、<code>knowledges</code></td><td><code>wiki_pages</code>、<code>wiki_page_revisions</code>、<code>wiki_folders</code></td><td>—</td></tr><tr><td>↳ Wiki 页面向量化</td><td><code>wiki</code></td><td><strong>Embedding</strong></td><td><code>models</code></td><td><code>embeddings</code></td><td>或外部向量库</td></tr></tbody></table></div>
+<p>每个子任务落定时回写 <code>task_pending_ops</code>；全部落定后条目状态由 <code>finalizing</code> 转 <code>completed</code>。重试耗尽的任务写入 <code>task_dead_letters</code>。</p>
+<h3 id="1-4-入库全景图-1-同步段与异步主链路">1.4 入库全景图 1：同步段与异步主链路</h3>
+<div class="mermaid">flowchart TD
+    subgraph SYNC[&quot;同步段（用户等待，秒级）&quot;]
+        A[&quot;上传文件&quot;] --&gt; B{&quot;可写？&quot;}
+        B --&gt;|否| B1[&quot;403 拒绝&quot;]
+        B --&gt;|是| C{&quot;内容指纹重复？&quot;}
+        C --&gt;|是| C1[&quot;返回『已存在』&quot;]
+        C --&gt;|否| D[(&quot;对象存储&lt;br/&gt;存原始文件&quot;)]
+        D --&gt; E[(&quot;Postgres&lt;br/&gt;resources + resource_bindings&quot;)]
+        E --&gt; F[(&quot;Postgres&lt;br/&gt;knowledges 置 pending&quot;)]
+        F --&gt; G[(&quot;Redis&lt;br/&gt;入队 document:process&quot;)]
+        G --&gt; H[&quot;返回受理&quot;]
+    end
+
+    G -.异步.-&gt; I[&quot;工作进程取任务&quot;]
+
+    subgraph ASYNC[&quot;异步主链路（后台，分钟级）&quot;]
+        I --&gt; J[(&quot;Postgres&lt;br/&gt;knowledges 置 processing&quot;)]
+        J --&gt; K[/&quot;gRPC 文档解析服务&lt;br/&gt;格式 → Markdown + 图片清单&lt;br/&gt;不调任何模型&quot;/]
+        K --&gt; K2{&quot;是音频文件？&quot;}
+        K2 --&gt;|是| K3[/&quot;外部模型&lt;br/&gt;语音转写 ASR&quot;/]
+        K2 --&gt;|否| L[&quot;按知识库切分规则切分&lt;br/&gt;可切父子两层&quot;]
+        K3 --&gt; L
+        L --&gt; M[(&quot;Postgres&lt;br/&gt;chunks 落库&quot;)]
+        M --&gt; N[/&quot;外部模型&lt;br/&gt;文本向量化 Embedding 批量&quot;/]
+        N --&gt; O[(&quot;向量索引写入&lt;br/&gt;Postgres embeddings 或外部向量库&quot;)]
+        O --&gt;|失败| O1[(&quot;回滚&lt;br/&gt;删除刚写入的 chunks&quot;)]
+        O --&gt;|成功| P[(&quot;Postgres&lt;br/&gt;tenants 累加已用存储&quot;)]
+        P --&gt; Q{&quot;有富化任务？&quot;}
+        Q --&gt;|否| R[(&quot;knowledges 置 completed&quot;)]
+        Q --&gt;|是| S[(&quot;knowledges 置 finalizing&lt;br/&gt;派发富化，见图 2&quot;)]
+    end</div>
+<h3 id="1-5-入库全景图-2-富化子链路">1.5 入库全景图 2：富化子链路</h3>
+<p>派发后六路并行，各自独立成败；任何一路失败都不改写正文已可检索这个事实。</p>
+<div class="mermaid">flowchart LR
+    S[&quot;主链路派发&lt;br/&gt;knowledge:post_process&quot;] --&gt; T{&quot;按知识库开关&lt;br/&gt;逐项判断&quot;}
+
+    T --&gt; U1[/&quot;图片理解模型&lt;br/&gt;每张图：识字 1 次 + 描述 1 次&quot;/]
+    U1 --&gt; E1[/&quot;Embedding&quot;/] --&gt; V1[(&quot;chunks 新增&lt;br/&gt;image_ocr / image_caption&lt;br/&gt;+ embeddings&quot;)]
+
+    T --&gt; U2[/&quot;对话生成模型&lt;br/&gt;整份摘要与画像&quot;/]
+    U2 --&gt; E2[/&quot;Embedding&quot;/] --&gt; V2[(&quot;knowledges 摘要字段&lt;br/&gt;+ chunks 新增 summary&lt;br/&gt;+ embeddings&quot;)]
+
+    T --&gt; U3[/&quot;对话生成模型&lt;br/&gt;推荐问题&quot;/]
+    U3 --&gt; E3[/&quot;Embedding&quot;/] --&gt; V3[(&quot;chunks 元信息&lt;br/&gt;+ embeddings&quot;)]
+
+    T --&gt; U4[/&quot;对话生成模型&lt;br/&gt;自动打标&quot;/]
+    U4 --&gt; V4[(&quot;knowledge_tag_relations&quot;)]
+
+    T --&gt; U5[/&quot;对话生成模型&lt;br/&gt;实体与关系抽取&quot;/]
+    U5 --&gt; V5[(&quot;Neo4j&quot;)]
+
+    T --&gt; U6[/&quot;对话生成模型&lt;br/&gt;Wiki 蒸馏&quot;/]
+    U6 --&gt; E6[/&quot;Embedding&quot;/] --&gt; V6[(&quot;wiki_pages + wiki_page_revisions&lt;br/&gt;+ embeddings&quot;)]
+
+    V1 &amp; V2 &amp; V3 &amp; V4 &amp; V5 &amp; V6 --&gt; W[(&quot;task_pending_ops&lt;br/&gt;逐个回报落定&quot;)]
+    W --&gt; X{&quot;全部落定？&quot;}
+    X --&gt;|否| W
+    X --&gt;|是| Y[(&quot;knowledges 置 completed&quot;)]
+    X --&gt;|重试耗尽| Z[(&quot;task_dead_letters&quot;)]</div>
+<p>图例：<code>[( )]</code> 为存储读写，<code>[/ /]</code> 为外部服务或外部模型调用，<code>{ }</code> 为分支。</p>
+<hr>
+<h2 id="2-检索流程">2. 检索流程</h2>
+<h3 id="2-1-一轮问答的阶段清单">2.1 一轮问答的阶段清单</h3>
+<p>入口：<code>POST /api/v1/sessions/:session_id/chat</code>（流式）</p>
+<p>事件链由代码按开关动态拼装（<code>internal/application/service/session_knowledge_qa.go:172-207</code>）：</p>
+<pre><code>纯聊天：  载入历史(可选) → 召回记忆 → 流式生成
+带检索：  载入历史(可选) → 召回记忆 → 理解提问 → 并行检索 → 重排
+          → 联网抓取(可选) → 合并 → 裁剪 → 数据分析(可选) → 组装提示 → 流式生成</code></pre>
+<div class="table-wrap"><table><thead><tr><th>阶段</th><th>外部模型</th><th>读表</th><th>写表</th><th>其他存储</th></tr></thead><tbody><tr><td>载入历史</td><td>—</td><td><code>sessions</code>、<code>messages</code></td><td>—</td><td>—</td></tr><tr><td>召回记忆</td><td><strong>无</strong>（刻意设计：每轮最前面，不能被模型延迟拖住）</td><td><code>memory_subjects</code>、<code>memory_items</code>、<code>memory_topic_stats</code></td><td>—</td><td>—</td></tr><tr><td>理解提问（改写 + 判断要不要查资料）</td><td><strong>对话生成模型</strong>；提问含图片时改用<strong>图片理解模型</strong></td><td><code>models</code>、<code>custom_agents</code>、<code>sessions</code></td><td><code>messages</code>（异步回写图片描述）</td><td>—</td></tr><tr><td>并行检索 · 片段召回</td><td><strong>Embedding</strong>（查询向量化，按知识库的 <code>embedding_model_id</code>）</td><td><code>knowledge_bases</code>、<code>models</code>、<code>vector_stores</code>、<code>embeddings</code>、<code>chunks</code></td><td>—</td><td>或外部向量库</td></tr><tr><td>并行检索 · 实体召回</td><td>—</td><td><code>chunks</code>、<code>knowledges</code></td><td>—</td><td><strong>Neo4j 读取</strong></td></tr><tr><td>重排</td><td><strong>重排模型</strong>（会话/智能体的 <code>rerank_model_id</code>）</td><td><code>models</code></td><td>—</td><td>—</td></tr><tr><td>Wiki 加权</td><td>—</td><td><code>knowledge_bases</code></td><td>—</td><td>—</td></tr><tr><td>联网抓取（可选）</td><td>—</td><td><code>web_search_providers</code></td><td>—</td><td>SearXNG 或第三方搜索 API</td></tr><tr><td>合并（展开父块、去重、合并相邻）</td><td>—</td><td><code>chunks</code></td><td>—</td><td>—</td></tr><tr><td>裁剪到 TopK</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><td>数据分析（可选）</td><td><strong>对话生成模型</strong></td><td><code>models</code></td><td>—</td><td>沙箱执行</td></tr><tr><td>组装提示</td><td>—</td><td><code>temporary_documents</code>、<code>knowledges</code></td><td>—</td><td>对象存储读附件</td></tr><tr><td>流式生成</td><td><strong>对话生成模型</strong>（会话/智能体的 <code>model_id</code>）</td><td><code>models</code></td><td><code>messages</code>（答案、引用、用量）</td><td><strong>Redis：跨实例流式分发</strong></td></tr><tr><td>事后·记忆抽取</td><td><strong>对话生成模型</strong></td><td><code>models</code>、<code>messages</code></td><td><code>memory_items</code>、<code>memory_item_embeddings</code>、<code>memory_subjects</code>、<code>memory_topic_stats</code>、<code>memory_extraction_sessions</code></td><td><strong>Redis 入队 <code>memory:extract</code></strong></td></tr><tr><td>事后·追问建议</td><td><strong>对话生成模型</strong></td><td><code>models</code>、<code>messages</code></td><td><code>message_suggestion_sets</code></td><td>—</td></tr></tbody></table></div>
+<h3 id="2-2-检索全景图">2.2 检索全景图</h3>
+<div class="mermaid">flowchart TD
+    A[&quot;用户提问&quot;] --&gt; B[(&quot;Postgres：sessions + messages&lt;br/&gt;载入历史&quot;)]
+    B --&gt; C[(&quot;Postgres：memory_subjects + memory_items&lt;br/&gt;召回记忆 · 不调模型&quot;)]
+    C --&gt; D[/&quot;外部模型：对话生成&lt;br/&gt;（含图则用图片理解模型）&lt;br/&gt;改写提问 + 判断要不要查资料&quot;/]
+    D --&gt; E{&quot;需要查资料？&quot;}
+    E --&gt;|否| N[&quot;组装提示&quot;]
+    E --&gt;|是| F[&quot;并行检索&quot;]
+
+    F --&gt; G[&quot;片段召回&quot;]
+    F --&gt; H[&quot;实体召回&quot;]
+
+    G --&gt; G1[/&quot;外部模型：文本向量化&lt;br/&gt;把提问转成向量&quot;/]
+    G1 --&gt; G2[(&quot;向量召回&lt;br/&gt;Postgres embeddings HNSW&lt;br/&gt;或外部向量库&quot;)]
+    G --&gt; G3[(&quot;关键词召回&lt;br/&gt;Postgres embeddings BM25&quot;)]
+    G2 &amp; G3 --&gt; G4[&quot;RRF 融合&lt;br/&gt;按名次倒数加权&quot;]
+
+    H --&gt; H1[(&quot;Neo4j：实体与关系&quot;)]
+    H1 --&gt; H2[(&quot;Postgres：chunks + knowledges&lt;br/&gt;回填片段正文&quot;)]
+
+    G4 &amp; H2 --&gt; I[/&quot;外部模型：重排&lt;br/&gt;精排候选&quot;/]
+    I --&gt; J[&quot;Wiki 页面加权 1.3 倍&quot;]
+    J --&gt; K{&quot;开了联网？&quot;}
+    K --&gt;|是| K1[/&quot;SearXNG / 第三方搜索&quot;/]
+    K --&gt;|否| L
+    K1 --&gt; L[(&quot;Postgres：chunks&lt;br/&gt;展开父块、去重、合并相邻&quot;)]
+    L --&gt; M[&quot;按预算裁剪到 TopK&quot;]
+    M --&gt; N
+    N --&gt; O[/&quot;外部模型：对话生成&lt;br/&gt;流式产出答案&quot;/]
+    O --&gt; P[(&quot;Redis：跨实例流式分发&quot;)]
+    P --&gt; Q[(&quot;Postgres：messages&lt;br/&gt;答案 + 引用 + 用量&quot;)]
+    Q -.异步.-&gt; R[/&quot;外部模型：对话生成&lt;br/&gt;抽取本轮记忆&quot;/]
+    Q -.异步.-&gt; S[/&quot;外部模型：对话生成&lt;br/&gt;生成追问建议&quot;/]
+    R --&gt; R1[(&quot;Postgres：memory_items + memory_item_embeddings&quot;)]
+    S --&gt; S1[(&quot;Postgres：message_suggestion_sets&quot;)]</div>
+<h3 id="2-3-混合检索内部-两路召回怎么合成一张榜">2.3 混合检索内部：两路召回怎么合成一张榜</h3>
+<div class="mermaid">flowchart LR
+    Q[&quot;改写后的提问&quot;] --&gt; V[&quot;向量召回路&quot;]
+    Q --&gt; K[&quot;关键词召回路&quot;]
+
+    V --&gt; V1[/&quot;Embedding 模型&lt;br/&gt;提问 → 向量&quot;/]
+    V1 --&gt; V2[(&quot;SQL：embeddings 表&lt;br/&gt;ORDER BY embedding::halfvec(维度) &lt;=&gt; 查询向量&lt;br/&gt;走 HNSW 索引&quot;)]
+    V2 --&gt; V3[&quot;先取 2 倍候选（下限 100、上限 200）&lt;br/&gt;再按距离阈值过滤&quot;]
+
+    K --&gt; K1[(&quot;SQL：embeddings 表&lt;br/&gt;content ||| 提问&lt;br/&gt;走 BM25 索引（中文分词）&quot;)]
+
+    V3 --&gt; F[&quot;RRF 融合&quot;]
+    K1 --&gt; F
+    F --&gt; F1[&quot;分数 = 向量权重/(k+向量名次)&lt;br/&gt;+ 关键词权重/(k+关键词名次)&quot;]
+    F1 --&gt; R[&quot;按分数降序&quot;]</div>
+<p><strong>为什么不用两路分数直接相加</strong>：向量相似度在 0~1 之间，关键词打分是无上界的 BM25 得分，量纲完全不同。直接相加会让关键词路系统性淹没向量路。RRF 只看名次不看分数，规避了这个问题。</p>
+<p><strong>为什么向量查询里要写两次类型转换</strong>：向量列没有固定维度（同一张表要能放 798 维、3584 维等多种向量），索引因此建在「转换成固定维度后的表达式」上。查询侧的排序表达式必须与索引表达式<strong>逐字一致</strong>，否则查询计划会退化成全表扫描——这不是冗余写法，是唯一能用上索引的写法（<code>internal/application/repository/retriever/postgres/repository.go:362-393</code>）。</p>
+<h3 id="2-4-索引表结构要点">2.4 索引表结构要点</h3>
+<p>向量与关键词共用同一张 <code>embeddings</code> 表（PostgreSQL 方案）：</p>
+<div class="table-wrap"><table><thead><tr><th>字段</th><th>作用</th></tr></thead><tbody><tr><td><code>embedding</code></td><td>向量本体，半精度、无固定维度</td></tr><tr><td><code>dimension</code></td><td>该行向量的维度，HNSW 索引按维度分建并带条件</td></tr><tr><td><code>content</code></td><td>片段正文，BM25 索引就建在它上面</td></tr><tr><td><code>knowledge_base_id</code> / <code>knowledge_id</code> / <code>chunk_id</code> / <code>tag_id</code></td><td>过滤与回链</td></tr><tr><td><code>is_enabled</code></td><td>片段是否参与检索；为空视为启用（历史数据兼容）</td></tr></tbody></table></div>
+<p>两类索引：</p>
+<ul><li><code>embeddings_search_idx</code> — BM25 全文索引，中文分词</li><li><code>embeddings_embedding_idx_3584</code> / <code>embeddings_embedding_idx_798</code> — 按维度分建的 HNSW 向量索引，带 <code>WHERE dimension = ...</code> 条件</li></ul>
+<hr>
+<h2 id="3-外部模型调用总表">3. 外部模型调用总表</h2>
+<div class="table-wrap"><table><thead><tr><th>模型能力</th><th>在入库流程被调用的位置</th><th>在检索流程被调用的位置</th><th>配置来源</th></tr></thead><tbody><tr><td><strong>文本向量化</strong></td><td>正文分块批量向量化；图片子块、摘要块、问题、Wiki 页面各自向量化</td><td>提问向量化（每轮 1 次，多知识库共用）</td><td>知识库 <code>embedding_model_id</code></td></tr><tr><td><strong>重排</strong></td><td>不调用</td><td>重排阶段（每轮 1 次）</td><td>会话/智能体 <code>rerank_model_id</code></td></tr><tr><td><strong>对话生成</strong></td><td>摘要与画像、推荐问题、自动打标、表格摘要、实体关系抽取、Wiki 蒸馏</td><td>理解提问、数据分析、流式生成答案、记忆抽取、追问建议</td><td>入库侧取知识库 <code>summary_model_id</code>（自动打标可单独指定）；检索侧取会话/智能体 <code>model_id</code></td></tr><tr><td><strong>图片理解</strong></td><td>图片识字 + 图片描述（每张图 2 次）</td><td>提问含图片时的理解阶段</td><td>知识库 <code>vlm_config.model_id</code></td></tr><tr><td><strong>语音转写</strong></td><td>音频类文件转文字</td><td>不调用</td><td>知识库 <code>asr_config.model_id</code></td></tr></tbody></table></div>
+<p><strong>模型供应商</strong>共支持 19 类（本地部署、通用 OpenAI 兼容、阿里云百炼、智谱、火山引擎、DeepSeek、混元、MiniMax、OpenAI、Gemini、Mimo、SiliconFlow、Jina、OpenRouter、LiteLLM、Requesty、NVIDIA、Novita、Azure OpenAI）。所有供应商差异在模型接入层消化，上层只认五类能力。</p>
+<h3 id="3-1-一次典型入库的模型调用次数">3.1 一次典型入库的模型调用次数</h3>
+<p>以「一份 80 页 PDF，切出 210 个文本块、含 12 张图片、开启全部富化」为例：</p>
+<div class="table-wrap"><table><thead><tr><th>模型</th><th>调用次数</th><th>说明</th></tr></thead><tbody><tr><td>文本向量化</td><td>约 5~8 次批量调用</td><td>210 个正文块 + 19 个图片子块 + 1 个摘要块 + 若干问题，按批次合并</td></tr><tr><td>图片理解</td><td>24 次</td><td>12 张图 × (识字 1 + 描述 1)</td></tr><tr><td>对话生成</td><td>约 15~40 次</td><td>摘要 1~3 次（内容长则分片）+ 推荐问题按块分批 + 自动打标 1 次 + 图谱抽取按块 1 次/块（仅开启时）</td></tr><tr><td>重排</td><td>0 次</td><td>入库不重排</td></tr></tbody></table></div>
+<h3 id="3-2-一次典型问答的模型调用次数">3.2 一次典型问答的模型调用次数</h3>
+<div class="table-wrap"><table><thead><tr><th>模型</th><th>调用次数</th></tr></thead><tbody><tr><td>对话生成</td><td>1（理解提问）+ 1（生成答案）+ 1（记忆抽取，异步）+ 1（追问建议，异步）= 约 4 次</td></tr><tr><td>文本向量化</td><td>1 次（提问向量化，跨知识库复用）</td></tr><tr><td>重排</td><td>1 次</td></tr><tr><td>图片理解</td><td>0 或 1（提问带图时）</td></tr></tbody></table></div>
+<hr>
+<h2 id="4-数据表访问矩阵">4. 数据表访问矩阵</h2>
+<p><code>R</code> = 读，<code>W</code> = 写，<code>RW</code> = 读写。</p>
+<div class="table-wrap"><table><thead><tr><th>表</th><th>入库同步段</th><th>入库异步段</th><th>富化</th><th>检索</th><th>说明</th></tr></thead><tbody><tr><td><code>knowledge_bases</code></td><td>R</td><td>R</td><td>R</td><td>R</td><td>加工配置与模型绑定的唯一来源</td></tr><tr><td><code>knowledges</code></td><td>W</td><td>RW</td><td>RW</td><td>R</td><td>条目主表与解析状态</td></tr><tr><td><code>chunks</code></td><td>—</td><td>RW</td><td>RW</td><td>R</td><td>检索命中的最小单元</td></tr><tr><td><code>embeddings</code></td><td>—</td><td>RW</td><td>W</td><td>R</td><td>向量 + 关键词索引（PostgreSQL 方案）</td></tr><tr><td><code>knowledge_processing_spans</code></td><td>—</td><td>W</td><td>W</td><td>—</td><td>加工链路时间线</td></tr><tr><td><code>knowledge_tags</code></td><td>—</td><td>—</td><td>R</td><td>R</td><td>标签定义</td></tr><tr><td><code>knowledge_tag_relations</code></td><td>—</td><td>—</td><td>W</td><td>R</td><td>自动打标结果</td></tr><tr><td><code>chunk_revisions</code></td><td>—</td><td>—</td><td>—</td><td>—</td><td>仅人工编辑分块时写</td></tr><tr><td><code>resources</code> / <code>resource_bindings</code></td><td>W</td><td>RW</td><td>W</td><td>R</td><td>文件与图片的引用登记</td></tr><tr><td><code>storage_backends</code></td><td>R</td><td>R</td><td>R</td><td>R</td><td>存储后端连接信息</td></tr><tr><td><code>vector_stores</code></td><td>—</td><td>R</td><td>R</td><td>R</td><td>外部向量库连接信息</td></tr><tr><td><code>models</code></td><td>—</td><td>R</td><td>R</td><td>R</td><td>模型连接参数</td></tr><tr><td><code>tenants</code></td><td>R</td><td>RW</td><td>—</td><td>R</td><td>配额与空间级默认值</td></tr><tr><td><code>tenant_members</code> / <code>kb_shares</code> / <code>organization_tenant_members</code></td><td>R</td><td>—</td><td>—</td><td>R</td><td>可见范围判定</td></tr><tr><td><code>tenant_api_keys</code></td><td>R</td><td>—</td><td>—</td><td>R</td><td>机器身份的能力范围</td></tr><tr><td><code>task_pending_ops</code></td><td>—</td><td>W</td><td>RW</td><td>—</td><td>富化子任务台账</td></tr><tr><td><code>task_dead_letters</code></td><td>—</td><td>W</td><td>W</td><td>—</td><td>重试耗尽归档</td></tr><tr><td><code>sessions</code></td><td>—</td><td>—</td><td>—</td><td>RW</td><td>会话与本会话策略覆盖</td></tr><tr><td><code>messages</code></td><td>—</td><td>—</td><td>—</td><td>RW</td><td>消息、引用、用量</td></tr><tr><td><code>message_suggestion_sets</code></td><td>—</td><td>—</td><td>—</td><td>W</td><td>追问建议缓存</td></tr><tr><td><code>custom_agents</code></td><td>—</td><td>—</td><td>—</td><td>R</td><td>智能体的模型与检索策略</td></tr><tr><td><code>temporary_documents</code></td><td>—</td><td>—</td><td>—</td><td>R</td><td>会话临时附件</td></tr><tr><td><code>memory_subjects</code> / <code>memory_items</code> / <code>memory_item_embeddings</code></td><td>—</td><td>—</td><td>—</td><td>RW</td><td>长期记忆</td></tr><tr><td><code>memory_topic_stats</code> / <code>memory_tombstones</code> / <code>memory_doc_affinity</code></td><td>—</td><td>—</td><td>—</td><td>RW</td><td>记忆的升级、遗忘与偏好信号</td></tr><tr><td><code>memory_extraction_sessions</code></td><td>—</td><td>—</td><td>—</td><td>W</td><td>抽取进度游标</td></tr><tr><td><code>web_search_providers</code></td><td>—</td><td>—</td><td>—</td><td>R</td><td>联网搜索服务商</td></tr><tr><td><code>wiki_pages</code> / <code>wiki_page_revisions</code> / <code>wiki_folders</code></td><td>—</td><td>—</td><td>W</td><td>R</td><td>Wiki 蒸馏产物</td></tr><tr><td><code>data_sources</code> / <code>sync_logs</code></td><td>—</td><td>—</td><td>—</td><td>—</td><td>仅数据源同步链路使用</td></tr><tr><td><code>audit_logs</code></td><td>W</td><td>—</td><td>—</td><td>—</td><td>关键操作留痕</td></tr></tbody></table></div>
+<hr>
+<h2 id="5-容易踩的坑">5. 容易踩的坑</h2>
+<ol><li><strong>知识库建了索引之后不能换向量化模型。</strong> 换了以后旧向量与新查询向量不在同一空间，检索会<strong>静默失准</strong>——不报错、只是结果变差，是最难发现的一类故障。</li></ol>
+<ol><li><strong>「收尾中」不等于「不可用」。</strong> 正文索引写完那一刻起内容就已经能被搜到，<code>finalizing</code> 只表示摘要、图片识别这类增强内容还在生成。把它当成不可用会让用户白等。</li></ol>
+<ol><li><strong>图片识字与图片描述是两次独立的模型调用</strong>，各自产出一个独立的可检索片段。一张图可能既贡献「图里的文字」又贡献「图里画了什么」，两者都能被单独命中。</li></ol>
+<ol><li><strong>关键词召回走的是 BM25 索引，不是 <code>LIKE</code>。</strong> 它对中文做了分词，所以「违约金计算」能命中「违约金的计算方式」，但也意味着<strong>极少见的专有名词可能被切碎</strong>，这时要靠向量召回兜底——这正是必须保留混合检索的原因。</li></ol>
+<ol><li><strong>向量召回先取 2 倍候选再按阈值过滤</strong>（下限 100、上限 200）。候选上限刻意压在 200：HNSW 索引要求搜索宽度不小于返回条数，宽度过大反而比全表扫描更慢，且会让查询计划放弃索引。</li></ol>
+<ol><li><strong>检索侧不判断可见范围。</strong> 范围由权限链路算好后传入。任何在检索侧「顺手查一下共享关系」的改动都会制造跨空间越权缺口。</li></ol>
+<ol><li><strong>记忆召回刻意不调模型。</strong> 它位于每轮最前面，一旦引入模型调用，首字延迟会被直接拖垮。</li></ol>
+<hr>
+<h2 id="附-关键代码位置">附：关键代码位置</h2>
+<div class="table-wrap"><table><thead><tr><th>环节</th><th>位置</th></tr></thead><tbody><tr><td>入库同步段</td><td><code>internal/application/service/knowledge_create.go</code></td></tr><tr><td>入库异步主链路</td><td><code>internal/application/service/knowledge_process.go</code></td></tr><tr><td>富化派发</td><td><code>internal/application/service/knowledge_post_process.go</code></td></tr><tr><td>图片识字与描述</td><td><code>internal/application/service/image_multimodal.go</code></td></tr><tr><td>文档解析服务</td><td><code>docreader/parser/</code>，接口定义 <code>docreader/proto/docreader.proto</code></td></tr><tr><td>问答事件链拼装</td><td><code>internal/application/service/session_knowledge_qa.go:172</code></td></tr><tr><td>各阶段插件</td><td><code>internal/application/service/chat_pipeline/</code></td></tr><tr><td>混合检索编排</td><td><code>internal/application/service/knowledgebase_search.go</code></td></tr><tr><td>RRF 融合</td><td><code>internal/application/service/knowledgebase_search_fusion.go</code></td></tr><tr><td>PostgreSQL 向量与关键词检索 SQL</td><td><code>internal/application/repository/retriever/postgres/repository.go</code></td></tr><tr><td>索引表 DDL</td><td><code>migrations/versioned/000002_embeddings.up.sql</code></td></tr><tr><td>异步任务类型清单</td><td><code>internal/types/task.go:235</code></td></tr></tbody></table></div></main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function () {
+  var blocks = Array.prototype.slice.call(document.querySelectorAll('.mermaid'));
+
+  // 离线打开时 CDN 取不到渲染库：把图的源码原样留在页面上，正文照常可读
+  if (!window.mermaid) {
+    blocks.forEach(function (el) {
+      var src = el.textContent;
+      el.innerHTML = '<p class="mermaid-fallback">（流程图需联网加载渲染库，以下为图的源码）</p><pre><code></code></pre>';
+      el.querySelector('code').textContent = src;
+    });
+    return;
+  }
+
+  var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  // useMaxWidth:false 让图按自然尺寸出图。大流程图被压到正文宽度后字号只剩三成，
+  // 根本读不清；宁可让容器横向滚动，再配上缩放按钮。
+  mermaid.initialize({
+    startOnLoad: false, theme: dark ? 'dark' : 'default',
+    flowchart: { htmlLabels: true, useMaxWidth: false },
+    securityLevel: 'loose'
+  });
+
+  mermaid.run({ nodes: blocks }).then(decorate).catch(decorate);
+
+  function decorate() {
+    blocks.forEach(function (el) {
+      var svg = el.querySelector('svg');
+      if (!svg) return;
+
+      var vb = (svg.getAttribute('viewBox') || '').split(/\s+/);
+      var natural = parseFloat(vb[2]) || svg.getBoundingClientRect().width;
+      if (!natural) return;
+
+      var bar = document.createElement('div');
+      bar.className = 'figure-bar';
+      bar.innerHTML = '<button data-act="out">− 缩小</button>'
+                    + '<button data-act="in">+ 放大</button>'
+                    + '<button data-act="fit">适应宽度</button>'
+                    + '<button data-act="reset">原始大小</button>'
+                    + '<span class="spacer"></span><span class="pct">100%</span>';
+      bar.title = '图宽于版面时可在图框内横向拖动';
+
+      var wrap = document.createElement('div');
+      wrap.className = 'figure';
+      el.parentNode.insertBefore(wrap, el);
+      wrap.appendChild(bar);
+      wrap.appendChild(el);
+
+      var scale = 1;
+      function apply() {
+        svg.style.width = (natural * scale) + 'px';
+        svg.style.height = 'auto';
+        bar.querySelector('.pct').textContent = Math.round(scale * 100) + '%';
+      }
+      bar.addEventListener('click', function (e) {
+        var act = e.target.getAttribute('data-act');
+        if (!act) return;
+        if (act === 'in') scale = Math.min(scale * 1.25, 4);
+        else if (act === 'out') scale = Math.max(scale / 1.25, 0.15);
+        else if (act === 'reset') scale = 1;
+        else if (act === 'fit') scale = Math.min(1, (el.clientWidth - 36) / natural);
+        apply();
+      });
+
+      // 首屏在「适应宽度」和「不小于 60%」之间取折中：
+      // 宽图硬压到容器宽度后字号只剩两三成，横向滚动比读不清强。
+      scale = Math.min(1, Math.max(0.6, (el.clientWidth - 36) / natural));
+      apply();
+    });
+  }
+})();
+</script>
+</body>
+</html>

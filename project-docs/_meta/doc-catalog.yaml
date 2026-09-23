@@ -1,0 +1,222 @@
+# 文档目录索引（doc-catalog）
+#
+# 这份文件是「本工程已启用文档目录索引」的标志。没有它，retire-docs 会整体拒绝执行，
+# save-* 系列技能的索引维护步骤会静默空转（工具退 0 但 stdout 打 "skipped": true）。
+#
+# 写入纪律（强制）：
+#   - 只能由 sentra-catalog-upsert.py 逐条写，禁止手工整体重写。
+#     这是多写者共享的聚合文件，整体重写会把别的链路刚落的条目一起抹掉。
+#   - 顶层 `documents:` 必须顶格且独占一行，条目以 "  - id: " 起始、字段缩进 4 空格。
+#     格式不符会被解析器当结构错拒绝。
+#   - updated_at 由工具每次写入时自动刷新，无需手工维护。
+#
+# 字段取值（封闭全集）：
+#   status    : draft / approved / active / completed / superseded
+#   canonical : true / false
+#   type      : product / iteration-design / iteration-plan / iteration-acceptance /
+#               domain / report / fix-issue / decision / learning / deploy / handoff / archive
+#
+# 不登记的两类（治理协议 §12.1 规则 A / A2）：
+#   iterations/ 下的实施计划类（type=iteration-plan）与验收类（type=iteration-acceptance）
+version: 1
+protocol_version: "2026-08-01-v3.4"
+updated_at: "2026-09-19T02:29:37-07:00"
+documents:
+  - id: product-数据字典
+    title: WeKnora 数据字典（逆向草稿）
+    path: project-docs/product/数据字典/README.md
+    type: product
+    status: active
+    canonical: true
+    topic: product-数据字典
+  - id: product-api-设计
+    title: WeKnora API 设计（逆向草稿）
+    path: project-docs/product/api-设计.md
+    type: product
+    status: active
+    canonical: true
+    topic: product-api-设计
+  - id: product-权限矩阵
+    title: WeKnora 权限矩阵（逆向草稿）
+    path: project-docs/product/权限矩阵.md
+    type: product
+    status: active
+    canonical: true
+    topic: product-权限矩阵
+  - id: product-总体需求
+    title: WeKnora 总体需求（逆向推断稿）
+    path: project-docs/product/总体需求.md
+    type: product
+    status: draft
+    canonical: true
+    topic: product-总体需求
+  - id: product-流程图-知识入库
+    title: WeKnora 知识入库流程图（逆向推断稿）
+    path: project-docs/product/流程图/知识入库.md
+    type: product
+    status: draft
+    canonical: true
+    topic: product-流程图
+    diagram_type: flowchart
+  - id: product-流程图-问答检索
+    title: WeKnora 问答检索流程图（逆向推断稿）
+    path: project-docs/product/流程图/问答检索.md
+    type: product
+    status: draft
+    canonical: true
+    topic: product-流程图
+    diagram_type: flowchart
+  - id: product-流程图-会话对话
+    title: WeKnora 会话对话流程图（逆向推断稿）
+    path: project-docs/product/流程图/会话对话.md
+    type: product
+    status: draft
+    canonical: true
+    topic: product-流程图
+    diagram_type: flowchart
+  - id: product-流程图-智能体执行
+    title: WeKnora 智能体执行流程图（逆向推断稿）
+    path: project-docs/product/流程图/智能体执行.md
+    type: product
+    status: draft
+    canonical: true
+    topic: product-流程图
+    diagram_type: flowchart
+  - id: product-流程图-知识库共享与访问控制
+    title: WeKnora 知识库共享与访问控制流程图（逆向推断稿）
+    path: project-docs/product/流程图/知识库共享与访问控制.md
+    type: product
+    status: draft
+    canonical: true
+    topic: product-流程图
+    diagram_type: flowchart
+  - id: domain-核心业务术语
+    title: WeKnora 核心业务术语
+    path: project-docs/domain/2026-09-19-核心业务术语.md
+    type: domain
+    status: active
+    canonical: true
+    topic: domain-核心业务术语
+  - id: domain-知识资产组织模型
+    title: 知识资产组织模型
+    path: project-docs/domain/2026-09-19-知识资产组织模型.md
+    type: domain
+    status: active
+    canonical: true
+    topic: domain-知识资产组织模型
+  - id: domain-知识资产访问与共享规则
+    title: 知识资产访问与共享规则
+    path: project-docs/domain/2026-09-19-知识资产访问与共享规则.md
+    type: domain
+    status: active
+    canonical: true
+    topic: domain-知识资产访问与共享规则
+  - id: domain-ddd-总览
+    title: 领域驱动设计总览（战略设计）
+    path: project-docs/domain/2026-09-19-领域驱动设计总览.md
+    type: domain
+    status: active
+    canonical: true
+    topic: domain-ddd-总览
+  - id: domain-ddd-核心域
+    title: 限界上下文详解 · 核心域
+    path: project-docs/domain/2026-09-19-限界上下文详解-核心域.md
+    type: domain
+    status: active
+    canonical: true
+    topic: domain-ddd-核心域
+  - id: domain-ddd-支撑域与通用域
+    title: 限界上下文详解 · 支撑域与通用域
+    path: project-docs/domain/2026-09-19-限界上下文详解-支撑域与通用域.md
+    type: domain
+    status: active
+    canonical: true
+    topic: domain-ddd-支撑域与通用域
+  - id: domain-ddd-事件与流程编排
+    title: 领域事件与业务流程编排
+    path: project-docs/domain/2026-09-19-领域事件与业务流程编排.md
+    type: domain
+    status: active
+    canonical: true
+    topic: domain-ddd-事件与流程编排
+  - id: product-知识库入库与检索流程
+    title: WeKnora 知识库入库与检索流程（含外部模型与存储明细）
+    path: project-docs/product/知识库入库与检索流程.md
+    type: product
+    status: active
+    canonical: true
+    topic: product-知识库入库与检索流程
+    diagram_type: flowchart
+  - id: domain-ddd-限界上下文总览
+    title: 领域驱动设计 · 限界上下文总览
+    path: project-docs/domain/2026-09-19-领域驱动设计-限界上下文总览.md
+    type: domain
+    status: active
+    canonical: true
+    topic: domain-领域驱动设计
+  - id: domain-ddd-聚合与业务不变量
+    title: 领域驱动设计 · 聚合与业务不变量
+    path: project-docs/domain/2026-09-19-领域驱动设计-聚合与业务不变量.md
+    type: domain
+    status: active
+    canonical: true
+    topic: domain-领域驱动设计
+  - id: domain-ddd-领域事件与上下文协作
+    title: 领域驱动设计 · 领域事件与上下文协作
+    path: project-docs/domain/2026-09-19-领域驱动设计-领域事件与上下文协作.md
+    type: domain
+    status: active
+    canonical: true
+    topic: domain-领域驱动设计
+  - id: product-流程图-知识入库-模型与数据访问-工程视图
+    title: 知识入库 · 模型与数据访问 · 工程视图（含 HTML 版）
+    path: project-docs/product/流程图/知识库插入与检索/知识入库-模型与数据访问-工程视图.md
+    type: product
+    status: active
+    canonical: true
+    topic: product-流程图
+    diagram_type: flowchart
+    audience: eng
+  - id: product-流程图-问答检索-模型与数据访问-工程视图
+    title: 问答检索 · 模型与数据访问 · 工程视图（含 HTML 版）
+    path: project-docs/product/流程图/知识库插入与检索/问答检索-模型与数据访问-工程视图.md
+    type: product
+    status: active
+    canonical: true
+    topic: product-流程图
+    diagram_type: flowchart
+    audience: eng
+directories:
+  - path: project-docs/product
+    type: product
+    purpose: L0 产品契约长生命单例（总体需求/权限矩阵/整体实施计划/api-设计/数据字典/流程图）
+  - path: project-docs/iterations
+    type: iteration-design
+    purpose: L2 迭代过程目录（<主题>/，含二次设计 / 详细实施计划 / 验收）
+  - path: project-docs/domain
+    type: domain
+    purpose: L1 业务领域知识（不依赖技术栈的概念模型、业务规则）
+  - path: project-docs/decisions
+    type: decision
+    purpose: L1 设计决策（含外部技术栈版本限制的应对决策）
+  - path: project-docs/learnings
+    type: learning
+    purpose: L1 可复用技巧/经验/实现模式/排查思路
+  - path: project-docs/fix-issue
+    type: fix-issue
+    purpose: L1 真实故障复盘与规避准则
+  - path: project-docs/reports
+    type: report
+    purpose: L3 时间序列：评审、验收与分析报告
+  - path: project-docs/handoff
+    type: handoff
+    purpose: L3 时间序列：交接、停留点
+  - path: project-docs/deploy
+    type: deploy
+    purpose: 部署、环境、发版、运维、迁移落盘
+  - path: project-docs/archive
+    type: archive
+    purpose: 废弃方案、早期参考资料与退役归档
+notes:
+  - 本索引由 init-sentra-memory 播种为空骨架，条目从第一次文档沉淀开始逐条累积。
+  - 骨架刚建好时 documents 为空，此时 retire-docs 扫描返回空候选属正常，不是失败。
